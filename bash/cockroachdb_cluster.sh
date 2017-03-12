@@ -85,7 +85,7 @@ rhysmacbook:cockroach_cluster_tmp rhys1$ cockroach sql --port 26260 --execute "S
 +--------------------+-------------+
 (8 rows)
 
-# clean up (gets rid of all process and data!)
+# clean up (gets rid of all processes and data!)
 cockroach quit --port=26257
 cockroach quit --port=26258
 cockroach quit --port=26259

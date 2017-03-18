@@ -1,18 +1,31 @@
+# Create array containing ports of cockroachdb instances
+function cc_port_list()
+{
+	PORT_LIST[0]=26257;
+	PORT_LIST[1]=26258;
+	PORT_LIST[2]=26259;
+	PORT_LIST[3]=26260;
+	PORT_LIST[4]=26261;
+}
+
 # Download and set PATH if needed
 cc_dl_set_path()
 {
 	command -v cockroach >/dev/null 2>&1 || {
 		cd;
-		wget https://binaries.cockroachdb.com/cockroach-latest.darwin-10.9-amd64.tgz
-		tar xvzf cockroach-latest.darwin-10.9-amd64.tgz
-		PATH="$PATH:/Users/rhys1/cockroach-latest.darwin-10.9-amd64";
-		export PATH;
+		[ -d "$HOME/cockroach-latest.darwin-10.9-amd64/" ] && PATH="$PATH:$HOME/cockroach-latest.darwin-10.9-amd64" && export PATH || {
+			wget https://binaries.cockroachdb.com/cockroach-latest.darwin-10.9-amd64.tgz
+			tar xvzf cockroach-latest.darwin-10.9-amd64.tgz;
+			PATH="$PATH:/$HOME/cockroach-latest.darwin-10.9-amd64" && export PATH;
+		}
+		
 	}
 }
 
 # Setup the cluster nodes
 function cc_mkdirs()
 {
+	cd
 	mkdir -p cockroach_cluster_tmp/node1;
 	mkdir -p cockroach_cluster_tmp/node2;
 	mkdir -p cockroach_cluster_tmp/node3;
@@ -22,7 +35,7 @@ function cc_mkdirs()
 
 function cc_start_cluster_nodes()
 {
-	cd cockroach_cluster_tmp
+	cd "$HOME/cockroach_cluster_tmp"
 	cockroach start --background --cache=50M --store=./node1;
 	cockroach start --background --cache=50M --store=./node2 --port=26258 --http-port=8081 --join=localhost:26257;
 	cockroach start --background --cache=50M --store=./node3 --port=26259 --http-port=8082 --join=localhost:26257;
@@ -41,22 +54,43 @@ function cc_web_console()
 function cc_murder_cluster()
 {
 	pgrep -x cockroach && {
-		cockroach quit --port=26257
-		cockroach quit --port=26258
-		cockroach quit --port=26259
-		cockroach quit --port=26260
-		cockroach quit --port=26261
+		cockroach quit --port=26257;
+		cockroach quit --port=26258;
+		cockroach quit --port=26259;
+		cockroach quit --port=26260;
+		cockroach quit --port=26261;
 	}
 	cd;
 	rm -Rf cockroach_cluster_tmp;
 }
 
+# create a db
+function cc_create_db()
+{
+	cockroach sql --port 26257 --execute "CREATE DATABASE rhys";
+	cockroach sql --port 26257 --execute "CREATE TABLE rhys.test (id SERIAL PRIMARY KEY, text VARCHAR(100) NOT NULL)";
+}
+
+# Inserts a random values into the rhys.test table
+function cc_random_inserts()
+{
+	X=$[$RANDOM % 5];
+	SELECTED_PORT=${PORT_LIST[$rand]}
+	MD5=$(echo $RANDOM | md5);
+	for i in {1..10000}; do 
+		cockroach sql --port $SELECTED_PORT --execute "INSERT INTO rhys.test (text) VALUES ('"$MD5"')";
+	done;
+}
+
 function cc_setup_cluster()
 {
+	cc_port_list;
 	cc_dl_set_path;
 	cc_mkdirs;
 	cc_start_cluster_nodes;
 	cc_web_console;
+	cc_create_db;
+	cc_random_inserts;
 }
 
 # TODO
